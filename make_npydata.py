@@ -8,6 +8,32 @@ if not os.path.exists('./npydata'):
 shanghai_root = '/home/dkliang/projects/synchronous/dataset/ShanghaiTech'
 jhu_root = '/home/dkliang/projects/synchronous/dataset/jhu_crowd_v2.0'
 qnrf_root = '/home/dkliang/projects/synchronous/dataset/UCF-QNRF_ECCV18'
+dronebird_root = './preprocessed_data'
+try:
+    dronebird_train_path = os.path.join(dronebird_root, 'train/images')
+    dronebird_test_path = os.path.join(dronebird_root, 'test/images')
+    dronebird_val_path = os.path.join(dronebird_root, 'val/images')
+    train_list = []
+    for file in os.listdir(dronebird_train_path):
+        if file.endswith('.jpg'):
+            train_list.append(os.path.join(dronebird_train_path, file))
+    train_list.sort()
+    np.save('./npydata/dronebird_train.npy', train_list)
+    test_list = []
+    for file in os.listdir(dronebird_test_path):
+        if file.endswith('.jpg'):
+            test_list.append(os.path.join(dronebird_test_path, file))
+    test_list.sort()
+    np.save('./npydata/dronebird_test.npy', test_list)
+    val_list = []
+    for file in os.listdir(dronebird_val_path):
+        if file.endswith('.jpg'):
+            val_list.append(os.path.join(dronebird_val_path, file))
+    val_list.sort()
+    np.save('./npydata/dronebird_val.npy', val_list)
+    print('dronebird dataset done')
+except:
+    print('dronebird dataset error')
 
 try:
 

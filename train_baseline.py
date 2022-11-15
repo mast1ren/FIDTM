@@ -42,17 +42,13 @@ def main(args):
         train_file = './npydata/nwpu_train.npy'
         test_file = './npydata/nwpu_val.npy'
     elif args['dataset'] == 'DroneBirds':
-        train_file = '../../ds/dronebirds/test.json'
-        test_file = '../../ds/dronebirds/test.json'
+        train_file = './npydata/dronebird_train.npy'
+        test_file = './npydata/dronebird_val.npy'
 
-    with open(train_file, 'r') as f:
-        train_list = json.load(f)
-    with open(test_file, 'r') as f:
-        test_list = json.load(f)
-    # with open(train_file, 'rb') as outfile:
-    #     train_list = np.load(outfile).tolist()
-    # with open(test_file, 'rb') as outfile:
-    #     test_list = np.load(outfile).tolist()
+    with open(train_file, 'rb') as outfile:
+        train_list = np.load(outfile).tolist()
+    with open(test_file, 'rb') as outfile:
+        test_list = np.load(outfile).tolist()
 
     os.environ['CUDA_VISIBLE_DEVICES'] = args['gpu_id']
     model = get_seg_model(train=True)
@@ -65,7 +61,6 @@ def main(args):
         ], lr=args['lr'], weight_decay=args['weight_decay'])
 
     criterion = nn.MSELoss(size_average=False).cuda()
-
 
     print(args['pre'])
 
@@ -92,7 +87,6 @@ def main(args):
         train_data = train_list
         test_data = test_list
 
-
     for epoch in range(args['start_epoch'], args['epochs']):
 
         start = time.time()
@@ -109,7 +103,8 @@ def main(args):
             is_best = prec1 < args['best_pred']
             args['best_pred'] = min(prec1, args['best_pred'])
 
-            print(' * best MAE {mae:.3f} '.format(mae=args['best_pred']), args['save_path'], end1 - start, end2 - end1)
+            print(' * best MAE {mae:.3f} '.format(
+                mae=args['best_pred']), args['save_path'], end1 - start, end2 - end1)
 
             save_checkpoint({
                 'epoch': epoch + 1,
@@ -118,6 +113,7 @@ def main(args):
                 'best_prec1': args['best_pred'],
                 'optimizer': optimizer.state_dict(),
             }, visi, is_best, args['save_path'])
+
 
 def pre_data(train_list, args, train):
     print("Pre_load dataset ......")
@@ -164,11 +160,11 @@ def train(Pre_data, model, criterion, optimizer, epoch, args):
                             args=args),
         batch_size=args['batch_size'], drop_last=False)
     args['lr'] = optimizer.param_groups[0]['lr']
-    print('epoch %d, processed %d samples, lr %.10f' % (epoch, epoch * len(train_loader.dataset), args['lr']))
+    print('epoch %d, processed %d samples, lr %.10f' %
+          (epoch, epoch * len(train_loader.dataset), args['lr']))
 
     model.train()
     end = time.time()
-
 
     for i, (fname, img, fidt_map, kpoint) in enumerate(train_loader):
 
@@ -180,12 +176,13 @@ def train(Pre_data, model, criterion, optimizer, epoch, args):
         d6 = model(img)
 
         if d6.shape != fidt_map.shape:
-            print("the shape is wrong, please check. Both of prediction and GT should be [B, C, H, W].")
+            print(
+                "the shape is wrong, please check. Both of prediction and GT should be [B, C, H, W].")
             exit()
         loss = criterion(d6, fidt_map)
 
         losses.update(loss.item(), img.size(0))
-        
+
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
@@ -201,10 +198,9 @@ def train(Pre_data, model, criterion, optimizer, epoch, args):
                   'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                   'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
                   'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
-                .format(
-                epoch, i, len(train_loader),gt_count, count, batch_time=batch_time,
-                data_time=data_time, loss=losses), end='')
-
+                  .format(
+                      epoch, i, len(train_loader), gt_count, count, batch_time=batch_time,
+                      data_time=data_time, loss=losses), end='')
 
 
 def validate(Pre_data, model, args):
@@ -261,7 +257,8 @@ def validate(Pre_data, model, args):
                 ori_img, box_img = generate_bounding_boxes(pred_kpoint, fname)
                 show_fidt = show_map(d6.data.cpu().numpy())
                 gt_show = show_map(fidt_map.data.cpu().numpy())
-                res = np.hstack((ori_img, gt_show, show_fidt, point_map, box_img))
+                res = np.hstack(
+                    (ori_img, gt_show, show_fidt, point_map, box_img))
                 cv2.imwrite(args['save_path'] + '_box/' + fname[0], res)
 
         gt_count = torch.sum(kpoint).item()
@@ -269,7 +266,8 @@ def validate(Pre_data, model, args):
         mse += abs(gt_count - count) * abs(gt_count - count)
 
         if i % 15 == 0:
-            print('\r{fname} Gt {gt:.2f} Pred {pred}'.format(fname=fname[0], gt=gt_count, pred=count), end='')
+            print('\r{fname} Gt {gt:.2f} Pred {pred}'.format(
+                fname=fname[0], gt=gt_count, pred=count), end='')
             visi.append(
                 [img.data.cpu().numpy(), d6.data.cpu().numpy(), fidt_map.data.cpu().numpy(),
                  fname])
@@ -279,7 +277,8 @@ def validate(Pre_data, model, args):
     mse = math.sqrt(mse / (len(test_loader)) * batch_size)
 
     nni.report_intermediate_result(mae)
-    print(' \n* MAE {mae:.3f}\n'.format(mae=mae), '* MSE {mse:.3f}'.format(mse=mse))
+    print(' \n* MAE {mae:.3f}\n'.format(mae=mae),
+          '* MSE {mse:.3f}'.format(mse=mse))
 
     return mae, visi
 
@@ -288,7 +287,7 @@ def LMDS_counting(input, w_fname, f_loc, args):
     input_max = torch.max(input).item()
 
     ''' find local maxima'''
-    if args['dataset'] == 'UCF_QNRF' or args['dataset'] == 'DroneBirds' :
+    if args['dataset'] == 'UCF_QNRF' or args['dataset'] == 'DroneBirds':
         input = nn.functional.avg_pool2d(input, (3, 3), stride=1, padding=1)
         keep = nn.functional.max_pool2d(input, (3, 3), stride=1, padding=1)
     else:
@@ -316,7 +315,8 @@ def generate_point_map(kpoint, f_loc, rate=1):
     '''obtain the location coordinates'''
     pred_coor = np.nonzero(kpoint)
 
-    point_map = np.zeros((int(kpoint.shape[0] * rate), int(kpoint.shape[1] * rate), 3), dtype="uint8") + 255  # 22
+    point_map = np.zeros(
+        (int(kpoint.shape[0] * rate), int(kpoint.shape[1] * rate), 3), dtype="uint8") + 255  # 22
     # count = len(pred_coor[0])
     coord_list = []
     for i in range(0, len(pred_coor[0])):
@@ -349,9 +349,11 @@ def generate_bounding_boxes(kpoint, fname):
         pt2d = np.zeros(kpoint.shape, dtype=np.float32)
         pt2d[pt[1], pt[0]] = 1.
         if np.sum(kpoint) > 1:
-            sigma = (distances[index][1] + distances[index][2] + distances[index][3]) * 0.1
+            sigma = (distances[index][1] + distances[index]
+                     [2] + distances[index][3]) * 0.1
         else:
-            sigma = np.average(np.array(kpoint.shape)) / 2. / 2.  # case: 1 point
+            sigma = np.average(np.array(kpoint.shape)) / \
+                2. / 2.  # case: 1 point
         sigma = min(sigma, min(Img_data.shape[0], Img_data.shape[1]) * 0.05)
 
         if sigma < 6:
