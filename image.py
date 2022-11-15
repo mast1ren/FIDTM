@@ -5,10 +5,11 @@ import scipy
 import numpy as np
 import h5py
 import cv2
+import os
 
 
 def load_data_fidt(img_path, args, train=True):
-    gt_path = img_path.replace('.jpg', '.h5').replace('images', 'gt_fidt_map')
+    gt_path = os.path.join(os.path.dirname(img_path).replace('images', 'gt_fidt_map'), 'GT_' + os.path.basename(img_path).replace('.jpg', '.h5'))
     img = Image.open(img_path).convert('RGB')
 
     while True:

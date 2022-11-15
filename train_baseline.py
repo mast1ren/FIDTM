@@ -16,6 +16,7 @@ import nni
 from nni.utils import merge_parameter
 from config import return_args, args
 import time
+import json
 
 warnings.filterwarnings('ignore')
 '''fixed random seed '''
@@ -40,11 +41,18 @@ def main(args):
     elif args['dataset'] == 'NWPU':
         train_file = './npydata/nwpu_train.npy'
         test_file = './npydata/nwpu_val.npy'
+    elif args['dataset'] == 'DroneBirds':
+        train_file = '../../ds/dronebirds/test.json'
+        test_file = '../../ds/dronebirds/test.json'
 
-    with open(train_file, 'rb') as outfile:
-        train_list = np.load(outfile).tolist()
-    with open(test_file, 'rb') as outfile:
-        test_list = np.load(outfile).tolist()
+    with open(train_file, 'r') as f:
+        train_list = json.load(f)
+    with open(test_file, 'r') as f:
+        test_list = json.load(f)
+    # with open(train_file, 'rb') as outfile:
+    #     train_list = np.load(outfile).tolist()
+    # with open(test_file, 'rb') as outfile:
+    #     test_list = np.load(outfile).tolist()
 
     os.environ['CUDA_VISIBLE_DEVICES'] = args['gpu_id']
     model = get_seg_model(train=True)
@@ -90,9 +98,10 @@ def main(args):
         start = time.time()
         train(train_data, model, criterion, optimizer, epoch, args)
         end1 = time.time()
+        print()
 
         '''inference '''
-        if epoch % 10 == 0 and epoch >= 200:
+        if epoch % 2 == 0 and epoch >= 0:
             prec1, visi = validate(test_data, model, args)
 
             end2 = time.time()
@@ -185,13 +194,16 @@ def train(Pre_data, model, criterion, optimizer, epoch, args):
         end = time.time()
 
         if i % args['print_freq'] == 0:
-            print('4_Epoch: [{0}][{1}/{2}]\t'
+            count, pred_kpoint, f_loc = LMDS_counting(d6, i + 1, f_loc, args)
+            gt_count = torch.sum(kpoint).item()
+            print('\r4_Epoch: [{0}][{1}/{2}]\t'
+                  'gt_count {gt_count:.2f} count {count:.2f}\t'
                   'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                   'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
                   'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
                 .format(
-                epoch, i, len(train_loader), batch_time=batch_time,
-                data_time=data_time, loss=losses))
+                epoch, i, len(train_loader),gt_count, count, batch_time=batch_time,
+                data_time=data_time, loss=losses), end='')
 
 
 
@@ -257,12 +269,12 @@ def validate(Pre_data, model, args):
         mse += abs(gt_count - count) * abs(gt_count - count)
 
         if i % 15 == 0:
-            print('{fname} Gt {gt:.2f} Pred {pred}'.format(fname=fname[0], gt=gt_count, pred=count))
+            print('\r{fname} Gt {gt:.2f} Pred {pred}'.format(fname=fname[0], gt=gt_count, pred=count), end='')
             visi.append(
                 [img.data.cpu().numpy(), d6.data.cpu().numpy(), fidt_map.data.cpu().numpy(),
                  fname])
             index += 1
-
+    print()
     mae = mae * 1.0 / (len(test_loader) * batch_size)
     mse = math.sqrt(mse / (len(test_loader)) * batch_size)
 
@@ -276,7 +288,7 @@ def LMDS_counting(input, w_fname, f_loc, args):
     input_max = torch.max(input).item()
 
     ''' find local maxima'''
-    if args['dataset'] == 'UCF_QNRF' :
+    if args['dataset'] == 'UCF_QNRF' or args['dataset'] == 'DroneBirds' :
         input = nn.functional.avg_pool2d(input, (3, 3), stride=1, padding=1)
         keep = nn.functional.max_pool2d(input, (3, 3), stride=1, padding=1)
     else:
