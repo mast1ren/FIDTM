@@ -9,7 +9,7 @@ import os
 
 
 def load_data_fidt(img_path, args, train=True):
-    img_path = os.path.join('./preprocessed_data', img_path)
+    # img_path = os.path.join('./preprocessed_data', img_path)
     gt_path = os.path.join(os.path.dirname(img_path).replace('images', 'gt_fidt_map'), 'GT_' + os.path.basename(img_path).replace('.jpg', '.h5'))
     img = Image.open(img_path).convert('RGB')
 

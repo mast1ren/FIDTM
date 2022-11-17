@@ -165,7 +165,7 @@ def train(Pre_data, model, criterion, optimizer, epoch, args):
 
     model.train()
     end = time.time()
-
+    f_loc = open("./temp_localization.txt", "w+")
     for i, (fname, img, fidt_map, kpoint) in enumerate(train_loader):
 
         data_time.update(time.time() - end)
@@ -194,12 +194,12 @@ def train(Pre_data, model, criterion, optimizer, epoch, args):
             count, pred_kpoint, f_loc = LMDS_counting(d6, i + 1, f_loc, args)
             gt_count = torch.sum(kpoint).item()
             print('\r4_Epoch: [{0}][{1}/{2}]\t'
-                  'gt_count {gt_count:.2f} count {count:.2f}\t'
+                  'gt_count {gt:.2f} count {c:.2f}\t'
                   'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                   'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
                   'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
                   .format(
-                      epoch, i, len(train_loader), gt_count, count, batch_time=batch_time,
+                      epoch, i, len(train_loader), gt=gt_count, c=count, batch_time=batch_time,
                       data_time=data_time, loss=losses), end='')
 
 

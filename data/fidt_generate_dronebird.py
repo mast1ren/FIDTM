@@ -69,8 +69,8 @@ with open(os.path.join(root, 'val.json'), 'r') as f:
     data = json.load(f)
 
 for i in range(len(data)):
-    img_test.append(os.path.join(root, data[i]))
-    gt_test.append(os.path.join(root, os.path.dirname(data[i]).replace('images', 'ground_truth'), 'GT_' + os.path.basename(data[i]).replace('.jpg', '.mat')))
+    img_val.append(os.path.join(root, data[i]))
+    gt_val.append(os.path.join(root, os.path.dirname(data[i]).replace('images', 'ground_truth'), 'GT_' + os.path.basename(data[i]).replace('.jpg', '.mat')))
 
 with open(os.path.join(root, 'test.json'), 'r') as f:
     data = json.load(f)
@@ -81,11 +81,13 @@ for i in range(len(data)):
 
 img_train.sort()
 gt_train.sort()
+img_val.sort()
+gt_val.sort()
 img_test.sort()
 gt_test.sort()
 # print(img_train)
 # print(gt_train)
-print(len(img_train), len(gt_train), len(img_test), len(gt_test))
+print(len(img_train), len(gt_train),len(img_val), len(gt_val), len(img_test), len(gt_test))
 
 
 ''''generate fidt map'''
@@ -155,9 +157,9 @@ for k in range(len(img_train)):
 
     # mat_path = new_img_path.split('.jpg')[0]
     gt_show_path = new_img_path.replace('images', 'gt_show_fidt')
-    h5_path = os.path.join(save_test_gt_path, os.path.basename(gt_test[k]).replace('.mat', '.h5'))
+    h5_path = os.path.join(save_train_gt_path, os.path.basename(gt_train[k]).replace('.mat', '.h5'))
 
-    print(img_train[k], np.sum(kpoint))
+    # print(img_train[k], np.sum(kpoint))
 
     kpoint = kpoint.astype(np.uint8)
     with h5py.File(h5_path, 'w') as hf:
@@ -165,6 +167,8 @@ for k in range(len(img_train)):
         hf['fidt_map'] = fidt_map
 
     cv2.imwrite(new_img_path, Img_data)
+    print('\r{}/{} {} {}'.format(k, len(img_train), img_train[k], np.sum(kpoint)), end='')
+print('\nDone')
 
 #     fidt_map = fidt_map
 #     fidt_map = fidt_map / np.max(fidt_map) * 255
@@ -199,7 +203,7 @@ for k in range(len(img_val)):
 
     rate = rate_1 * rate_2
 
-    print(img_test[k], Img_data.shape)
+    # print(img_test[k], Img_data.shape)
 
     Gt_data = Gt_data['locations']
     Gt_data = Gt_data * rate
@@ -223,6 +227,8 @@ for k in range(len(img_val)):
         hf['fidt_map'] = fidt_map
 
     cv2.imwrite(new_img_path, Img_data)
+    print('\r{}/{} {} {}'.format(k, len(img_val), img_val[k], Img_data.shape), end='')
+print('\nDone')
 
 
 '''for testing dataset'''
@@ -248,7 +254,7 @@ for k in range(len(img_test)):
 
     rate = rate_1 * rate_2
 
-    print(img_test[k], Img_data.shape)
+    # print(img_test[k], Img_data.shape)
 
     Gt_data = Gt_data['locations']
     Gt_data = Gt_data * rate
@@ -272,6 +278,8 @@ for k in range(len(img_test)):
         hf['fidt_map'] = fidt_map
 
     cv2.imwrite(new_img_path, Img_data)
+    print('\r{}/{} {} {}'.format(k, len(img_test), img_test[k], Img_data.shape), end='')
+print('\nDone')
 
     # fidt_map = fidt_map
     # fidt_map = fidt_map / np.max(fidt_map) * 255

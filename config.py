@@ -37,7 +37,7 @@ parser.add_argument('--lr', type=float, default=1e-4,
                     help='learning rate')
 parser.add_argument('--weight_decay', type=float, default=5 * 1e-4,
                     help='weight decay')
-parser.add_argument('--preload_data', type=bool, default=True,
+parser.add_argument('--preload_data', type=bool, default=False,
                     help='preload data. ')
 parser.add_argument('--visual', type=bool, default=False,
                     help='visual for bounding box. ')
