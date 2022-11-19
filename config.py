@@ -17,10 +17,10 @@ parser.add_argument('--start_epoch', type=int, default=0,
                     help='start epoch for training')
 parser.add_argument('--epochs', type=int, default=3000,
                     help='end epoch for training')
-parser.add_argument('--pre', type=str, default=None,
-                    help='pre-trained model directory')
-# parser.add_argument('--pre', type=str, default='./model_best_qnrf.pth',
+# parser.add_argument('--pre', type=str, default=None,
 #                     help='pre-trained model directory')
+parser.add_argument('--pre', type=str, default='./save_file/DroneBirds/model_best.pth',
+                    help='pre-trained model directory')
 
 
 parser.add_argument('--batch_size', type=int, default=2,

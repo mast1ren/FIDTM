@@ -16,12 +16,35 @@ import nni
 from nni.utils import merge_parameter
 from config import return_args, args
 
+from sklearn.metrics import mean_squared_error,mean_absolute_error
+
 warnings.filterwarnings('ignore')
 
 setup_seed(args.seed)
 
 logger = logging.getLogger('mnist_AutoML')
+def get_seq_class(seq, set):
+    backlight = ['DJI_0021', 'DJI_0032', 'DJI_0202', 'DJI_0339', 'DJI_0340']
+    fly = ['DJI_0177', 'DJI_0174', 'DJI_0022', 'DJI_0180', 'DJI_0181', 'DJI_0200', 'DJI_0544', 'DJI_0012', 'DJI_0178', 'DJI_0343', 'DJI_0185', 'DJI_0195']
 
+    angle_90 = ['DJI_0179', 'DJI_0186', 'DJI_0189', 'DJI_0191', 'DJI_0196', 'DJI_0190']
+
+    mid_size = ['DJI_0012', 'DJI_0013', 'DJI_0014', 'DJI_0021', 'DJI_0022', 'DJI_0026', 'DJI_0028', 'DJI_0028', 'DJI_0030', 'DJI_0028', 'DJI_0030', 'DJI_0034','DJI_0200', 'DJI_0544']
+
+    light = 'sunny'
+    bird = 'stand'
+    angle = '60'
+    size = 'small'
+    if seq in backlight:
+        light = 'backlight'
+    if seq in fly:
+        bird = 'fly'
+    if seq in angle_90:
+        angle = '90'
+    if seq in mid_size:
+        size = 'mid'
+
+    return light, angle, bird, size
 
 def main(args):
     if args['dataset'] == 'ShanghaiA':
@@ -34,6 +57,8 @@ def main(args):
         test_file = './npydata/jhu_test.npy'
     elif args['dataset'] == 'NWPU':
         test_file = './npydata/nwpu_val.npy'
+    elif args['dataset'] == 'DroneBirds':
+        test_file = './npydata/dronebird_test.npy'
 
     with open(test_file, 'rb') as outfile:
         val_list = np.load(outfile).tolist()
@@ -108,6 +133,8 @@ def pre_data(train_list, args, train):
 
 
 def validate(Pre_data, model, args):
+    preds = [[] for i in range(8)]
+    gts = [[] for i in range(8)]
     print('begin test')
     batch_size = 1
     test_loader = torch.utils.data.DataLoader(
@@ -135,7 +162,9 @@ def validate(Pre_data, model, args):
     f_loc = open("./local_eval/point_files/A_localization.txt", "w+")
 
     for i, (fname, img, fidt_map, kpoint) in enumerate(test_loader):
-
+        seq = int(os.path.basename(fname[0])[3:6])
+        seq = 'DJI_' + str(seq).zfill(4)
+        light, angle, bird, size = get_seq_class(seq, 'test')
         count = 0
         img = img.cuda()
 
@@ -167,9 +196,34 @@ def validate(Pre_data, model, args):
         gt_count = torch.sum(kpoint).item()
         mae += abs(gt_count - count)
         mse += abs(gt_count - count) * abs(gt_count - count)
-
+        pred_e = count
+        gt_e = gt_count
+        if light == 'sunny':
+            preds[0].append(pred_e)
+            gts[0].append(gt_e)
+        elif light == 'backlight':
+            preds[1].append(pred_e)
+            gts[1].append(gt_e)
+        if angle == '60':
+            preds[2].append(pred_e)
+            gts[2].append(gt_e)
+        else:
+            preds[3].append(pred_e)
+            gts[3].append(gt_e)
+        if bird == 'stand':
+            preds[4].append(pred_e)
+            gts[4].append(gt_e)
+        else:
+            preds[5].append(pred_e)
+            gts[5].append(gt_e)
+        if size == 'small':
+            preds[6].append(pred_e)
+            gts[6].append(gt_e)
+        else:
+            preds[7].append(pred_e)
+            gts[7].append(gt_e)        
         if i % 1 == 0:
-            print('{fname} Gt {gt:.2f} Pred {pred}'.format(fname=fname[0], gt=gt_count, pred=count))
+            print('\r[{}/{}]{fname} Gt {gt:.2f} Pred {pred}'.format(i, len(test_loader), fname=fname[0], gt=gt_count, pred=count), end='')
             visi.append(
                 [img.data.cpu().numpy(), d6.data.cpu().numpy(), fidt_map.data.cpu().numpy(),
                  fname])
@@ -180,6 +234,12 @@ def validate(Pre_data, model, args):
 
     nni.report_intermediate_result(mae)
     print(' \n* MAE {mae:.3f}\n'.format(mae=mae), '* MSE {mse:.3f}'.format(mse=mse))
+    attri = ['sunny', 'backlight', '60', '90', 'stand', 'fly', 'small', 'mid']
+    for i in range(8):
+    # print(len(preds[i]))
+        if len(preds[i]) == 0:
+            continue
+        print('{}: MAE:{}. RMSE:{}.'.format(attri[i], mean_absolute_error(preds[i], gts[i]), np.sqrt(mean_squared_error(preds[i], gts[i]))))
 
     return mae, visi
 
@@ -188,8 +248,8 @@ def LMDS_counting(input, w_fname, f_loc, args):
     input_max = torch.max(input).item()
 
     ''' find local maxima'''
-    if args['dataset'] == 'UCF_QNRF':
-        #input = nn.functional.avg_pool2d(input, (3, 3), stride=1, padding=1)
+    if args['dataset'] == 'UCF_QNRF' or args['dataset'] == 'DroneBirds':
+        input = nn.functional.avg_pool2d(input, (3, 3), stride=1, padding=1)
         keep = nn.functional.max_pool2d(input, (3, 3), stride=1, padding=1)
     else:
         keep = nn.functional.max_pool2d(input, (3, 3), stride=1, padding=1)
@@ -234,8 +294,7 @@ def generate_point_map(kpoint, f_loc, rate=1):
 
 def generate_bounding_boxes(kpoint, fname):
     '''change the data path'''
-    Img_data = cv2.imread(
-        '/home/dkliang/projects/synchronous/dataset/ShanghaiTech/part_A_final/test_data/images/' + fname[0])
+    Img_data = cv2.imread('./preprocessed_data/test/images/' + fname[0])
     ori_Img_data = Img_data.copy()
 
     '''generate sigma'''
