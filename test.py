@@ -83,13 +83,13 @@ def main(args):
             print("=> loading checkpoint '{}'".format(args['pre']))
             checkpoint = torch.load(args['pre'])
             model.load_state_dict(checkpoint['state_dict'], strict=False)
-            args['start_epoch'] = checkpoint['epoch']
-            args['best_pred'] = checkpoint['best_prec1']
+            # args['start_epoch'] = checkpoint['epoch']
+            # args['best_pred'] = checkpoint['best_prec1']
         else:
             print("=> no checkpoint found at '{}'".format(args['pre']))
 
     torch.set_num_threads(args['workers'])
-    print(args['best_pred'], args['start_epoch'])
+    # print(args['best_pred'], args['start_epoch'])
 
     if args['preload_data'] == True:
         test_data = pre_data(val_list, args, train=False)
@@ -99,16 +99,16 @@ def main(args):
     '''inference '''
     prec1, visi = validate(test_data, model, args)
 
-    is_best = prec1 < args['best_pred']
-    args['best_pred'] = min(prec1, args['best_pred'])
+    # is_best = prec1 < args['best_pred']
+    # args['best_pred'] = min(prec1, args['best_pred'])
 
-    print('\nThe visualizations are provided in ', args['save_path'])
-    save_checkpoint({
-        'arch': args['pre'],
-        'state_dict': model.state_dict(),
-        'best_prec1': args['best_pred'],
-        'optimizer': optimizer.state_dict(),
-    }, visi, is_best, args['save_path'])
+    # print('\nThe visualizations are provided in ', args['save_path'])
+    # save_checkpoint({
+    #     'arch': args['pre'],
+    #     'state_dict': model.state_dict(),
+    #     'best_prec1': args['best_pred'],
+    #     'optimizer': optimizer.state_dict(),
+    # }, visi, is_best, args['save_path'])
 
 
 def pre_data(train_list, args, train):
@@ -224,22 +224,25 @@ def validate(Pre_data, model, args):
             gts[7].append(gt_e)        
         if i % 1 == 0:
             print('\r[{}/{}]{fname} Gt {gt:.2f} Pred {pred}'.format(i, len(test_loader), fname=fname[0], gt=gt_count, pred=count), end='')
-            visi.append(
-                [img.data.cpu().numpy(), d6.data.cpu().numpy(), fidt_map.data.cpu().numpy(),
-                 fname])
+            # visi.append(
+            #     [img.data.cpu().numpy(), d6.data.cpu().numpy(), fidt_map.data.cpu().numpy(),
+            #      fname])
             index += 1
 
     mae = mae * 1.0 / (len(test_loader) * batch_size)
     mse = math.sqrt(mse / (len(test_loader)) * batch_size)
 
     nni.report_intermediate_result(mae)
-    print(' \n* MAE {mae:.3f}\n'.format(mae=mae), '* MSE {mse:.3f}'.format(mse=mse))
-    attri = ['sunny', 'backlight', '60', '90', 'stand', 'fly', 'small', 'mid']
-    for i in range(8):
-    # print(len(preds[i]))
-        if len(preds[i]) == 0:
-            continue
-        print('{}: MAE:{}. RMSE:{}.'.format(attri[i], mean_absolute_error(preds[i], gts[i]), np.sqrt(mean_squared_error(preds[i], gts[i]))))
+    with open('result.txt', 'a') as f:
+        f.write(' \n* MAE {mae:.3f}\n'.format(mae=mae), '* MSE {mse:.3f}\n'.format(mse=mse))
+        print(' \n* MAE {mae:.3f}\n'.format(mae=mae), '* MSE {mse:.3f}'.format(mse=mse))
+        attri = ['sunny', 'backlight', '60', '90', 'stand', 'fly', 'small', 'mid']
+        for i in range(8):
+        # print(len(preds[i]))
+            if len(preds[i]) == 0:
+                continue
+            print('{}: MAE:{}. RMSE:{}.'.format(attri[i], mean_absolute_error(preds[i], gts[i]), np.sqrt(mean_squared_error(preds[i], gts[i]))))
+            f.write('{}: MAE:{}. RMSE:{}.\n'.format(attri[i], mean_absolute_error(preds[i], gts[i]), np.sqrt(mean_squared_error(preds[i], gts[i]))))
 
     return mae, visi
 
